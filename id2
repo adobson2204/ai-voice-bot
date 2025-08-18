@@ -1,0 +1,53 @@
+import sql from "@/app/api/utils/sql";
+
+// GET - List all campaigns with stats
+export async function GET(request) {
+  try {
+    const campaigns = await sql`
+      SELECT 
+        c.*,
+        COALESCE(a.appointment_count, 0) as appointments_booked,
+        COALESCE(cl.call_count, 0) as calls_made
+      FROM campaigns c
+      LEFT JOIN (
+        SELECT campaign_id, COUNT(*) as appointment_count 
+        FROM appointments 
+        GROUP BY campaign_id
+      ) a ON c.id = a.campaign_id
+      LEFT JOIN (
+        SELECT campaign_id, COUNT(*) as call_count 
+        FROM call_logs 
+        GROUP BY campaign_id
+      ) cl ON c.id = cl.campaign_id
+      ORDER BY c.created_at DESC
+    `;
+
+    return Response.json({ campaigns });
+  } catch (error) {
+    console.error('Error fetching campaigns:', error);
+    return Response.json({ error: 'Failed to fetch campaigns' }, { status: 500 });
+  }
+}
+
+// POST - Create new campaign
+export async function POST(request) {
+  try {
+    const body = await request.json();
+    const { name, state, target_calls, script } = body;
+
+    if (!name) {
+      return Response.json({ error: 'Campaign name is required' }, { status: 400 });
+    }
+
+    const [campaign] = await sql`
+      INSERT INTO campaigns (name, state, target_calls, script, status)
+      VALUES (${name}, ${state || null}, ${target_calls || 100}, ${script || ''}, 'paused')
+      RETURNING *
+    `;
+
+    return Response.json({ campaign });
+  } catch (error) {
+    console.error('Error creating campaign:', error);
+    return Response.json({ error: 'Failed to create campaign' }, { status: 500 });
+  }
+}

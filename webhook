@@ -1,0 +1,96 @@
+import sql from "@/app/api/utils/sql";
+
+// Handle Twilio status callbacks for call updates
+export async function POST(request) {
+  try {
+    const formData = await request.formData();
+    const callSid = formData.get('CallSid');
+    const callStatus = formData.get('CallStatus');
+    const callDuration = formData.get('CallDuration') || '0';
+    const from = formData.get('From');
+    const to = formData.get('To');
+
+    console.log('Webhook received:', {
+      callSid,
+      callStatus,
+      callDuration,
+      from,
+      to
+    });
+
+    if (!callSid) {
+      return Response.json({ error: "CallSid is required" }, { status: 400 });
+    }
+
+    // Map Twilio status to our status
+    let status = callStatus;
+    switch (callStatus) {
+      case 'completed':
+        status = 'answered';
+        break;
+      case 'busy':
+        status = 'busy';
+        break;
+      case 'no-answer':
+        status = 'no_answer';
+        break;
+      case 'failed':
+        status = 'failed';
+        break;
+      case 'canceled':
+        status = 'canceled';
+        break;
+      default:
+        status = callStatus;
+    }
+
+    // Update the call log with final status and duration
+    const updated = await sql`
+      UPDATE call_logs 
+      SET call_status = ${status}, 
+          call_duration = ${parseInt(callDuration)},
+          notes = CASE 
+            WHEN notes LIKE '%[TEST CALL]%' THEN 
+              CONCAT('[TEST CALL] Call completed - Status: ', ${status}, ' Duration: ', ${callDuration}, 's')
+            ELSE 
+              CONCAT('Call completed - Status: ', ${status}, ' Duration: ', ${callDuration}, 's')
+          END
+      WHERE notes LIKE '%Call initiated with SID: ${callSid}%'
+      RETURNING campaign_id, phone
+    `;
+
+    if (updated.length > 0) {
+      console.log(`Updated call log for SID ${callSid}: ${status}, ${callDuration}s`);
+
+      // If it's a test call, we don't update campaign stats
+      const isTestCall = updated[0].notes && updated[0].notes.includes('[TEST CALL]');
+
+      // Update campaign stats for successful calls (only non-test calls)
+      if (status === 'answered' && !isTestCall) {
+        const campaignId = updated[0].campaign_id;
+        if (campaignId) {
+          await sql`
+            UPDATE campaigns 
+            SET updated_at = CURRENT_TIMESTAMP
+            WHERE id = ${campaignId}
+          `;
+        }
+      }
+    } else {
+      console.log(`No call log found for SID ${callSid}`);
+    }
+
+    return Response.json({ 
+      success: true, 
+      message: "Webhook processed successfully",
+      callSid,
+      status 
+    });
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    return Response.json(
+      { error: "Failed to process webhook: " + error.message },
+      { status: 500 }
+    );
+  }
+}

@@ -1,0 +1,66 @@
+import {
+  Phone,
+  Calendar,
+  Users,
+  BarChart3,
+  Settings,
+  X,
+} from "lucide-react";
+
+export default function Sidebar({ isOpen, onClose }) {
+  const navItems = [
+    { name: "Dashboard", href: "#", icon: BarChart3, current: true },
+    { name: "Call Campaigns", href: "#campaigns", icon: Phone, current: false },
+    { name: "Appointments", href: "#appointments", icon: Calendar, current: false },
+    { name: "Contacts", href: "#contacts", icon: Users, current: false },
+    { name: "Settings", href: "#settings", icon: Settings, current: false },
+  ];
+
+  return (
+    <>
+      <div
+        className={`fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 z-30 transform transition-transform duration-300 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        <div className="p-6 hidden lg:block pt-20"></div>
+
+        <div className="p-4 lg:hidden flex items-center justify-between border-b border-gray-200 pt-16">
+          <h1 className="text-lg font-semibold text-[#101828]">
+            CallBot Manager
+          </h1>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 rounded-lg"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <nav className="px-4 space-y-2 lg:mt-4">
+          {navItems.map((item) => (
+            <a
+              key={item.name}
+              href={item.href}
+              className={`flex items-center gap-3 px-3 py-3 rounded-lg font-medium transition-colors ${
+                item.current
+                  ? "bg-blue-50 text-blue-700"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
+              onClick={onClose}
+            >
+              <item.icon size={20} />
+              {item.name}
+            </a>
+          ))}
+        </nav>
+      </div>
+
+      {/* Sidebar Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+    </>
+  );
+}

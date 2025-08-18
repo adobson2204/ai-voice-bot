@@ -1,0 +1,119 @@
+import { Calendar, X } from "lucide-react";
+
+const formatAppointmentTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const isToday = date.toDateString() === now.toDateString();
+    const isTomorrow = date.toDateString() === tomorrow.toDateString();
+
+    const timeString = date.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+    });
+
+    if (isToday) {
+        return `Today at ${timeString}`;
+    } else if (isTomorrow) {
+        return `Tomorrow at ${timeString}`;
+    } else {
+        return `${date.toLocaleDateString("en-US", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+        })} at ${timeString}`;
+    }
+};
+
+function AppointmentItem({ appointment, onCancel }) {
+    const statusClasses = {
+        confirmed: "bg-green-100 text-green-700",
+        cancelled: "bg-red-100 text-red-700",
+        pending: "bg-yellow-100 text-yellow-700",
+    };
+
+    return (
+        <div
+            className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors gap-4"
+        >
+            <div className="flex items-start gap-4">
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Calendar size={16} className="text-blue-600" />
+                </div>
+                <div className="min-w-0">
+                    <div className="font-semibold text-[#101828] text-sm lg:text-base">
+                        {appointment.customerName}
+                    </div>
+                    <div className="text-xs lg:text-sm text-[#667085] break-words">
+                        {appointment.phone}
+                    </div>
+                    <div className="text-sm lg:text-base text-[#101828] font-medium">
+                        {formatAppointmentTime(appointment.scheduledFor)}
+                    </div>
+                    <div className="text-xs lg:text-sm text-[#667085]">
+                        Agent: {appointment.agent}
+                    </div>
+                </div>
+            </div>
+            <div className="flex items-center gap-2 justify-end">
+                <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        statusClasses[appointment.status] || statusClasses.pending
+                    }`}
+                >
+                    {appointment.status}
+                </span>
+                {appointment.status !== "cancelled" && (
+                    <button
+                        onClick={() => onCancel(appointment.id)}
+                        className="w-8 h-8 flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                        <X size={16} />
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+
+export default function AppointmentList({ appointments, onCancel }) {
+    return (
+        <div
+            id="appointments"
+            className="bg-white rounded-xl border border-[#EAECF0]"
+        >
+            <div className="p-4 lg:p-6 border-b border-[#EAECF0]">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-[#101828]">
+                        Recent Appointments
+                    </h3>
+                    <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                        View All
+                    </button>
+                </div>
+            </div>
+
+            <div className="p-4 lg:p-6">
+                {appointments.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 text-sm lg:text-base">
+                        No appointments scheduled yet.
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {appointments.map((appointment) => (
+                            <AppointmentItem
+                                key={appointment.id}
+                                appointment={appointment}
+                                onCancel={onCancel}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}

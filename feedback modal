@@ -1,0 +1,186 @@
+import { useState } from "react";
+import { X, Star, MessageSquare } from "lucide-react";
+
+export default function FeedbackModal({ show, onClose, onSubmit, campaignId, campaignName, isLoading }) {
+  const [feedbackData, setFeedbackData] = useState({
+    rating: 0,
+    feedbackText: "",
+    suggestions: "",
+  });
+
+  const [hoveredRating, setHoveredRating] = useState(0);
+
+  const handleSubmit = () => {
+    if (feedbackData.rating === 0 || !feedbackData.feedbackText.trim()) {
+      return;
+    }
+    onSubmit(feedbackData);
+  };
+
+  const handleClose = () => {
+    setFeedbackData({ rating: 0, feedbackText: "", suggestions: "" });
+    setHoveredRating(0);
+    onClose();
+  };
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="w-full max-w-lg bg-white rounded-xl shadow-xl border border-[#EAECF0] max-h-[90vh] overflow-y-auto">
+        <div className="p-4 lg:p-6 border-b border-[#EAECF0]">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-[#101828]">
+                Test Call Feedback
+              </h3>
+              <p className="text-sm text-[#667085]">
+                How was your experience with the bot?
+              </p>
+            </div>
+            <button
+              onClick={handleClose}
+              className="w-8 h-8 flex items-center justify-center text-[#D0D5DD] hover:text-[#667085] transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 lg:p-6 space-y-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+            <div className="flex items-center gap-2 mb-2">
+              <MessageSquare size={16} />
+              <strong>Campaign:</strong> {campaignName}
+            </div>
+            <p>Your feedback helps improve the bot's performance for future calls.</p>
+          </div>
+
+          {/* Rating */}
+          <div>
+            <label className="block text-sm font-medium text-[#101828] mb-3">
+              Overall Experience Rating
+            </label>
+            <div className="flex items-center gap-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onMouseEnter={() => setHoveredRating(star)}
+                  onMouseLeave={() => setHoveredRating(0)}
+                  onClick={() =>
+                    setFeedbackData({ ...feedbackData, rating: star })
+                  }
+                  className="p-1 hover:scale-110 transition-transform"
+                  disabled={isLoading}
+                >
+                  <Star
+                    size={32}
+                    className={`${
+                      star <= (hoveredRating || feedbackData.rating)
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-gray-300"
+                    } transition-colors`}
+                  />
+                </button>
+              ))}
+              <span className="ml-3 text-sm text-[#667085]">
+                {feedbackData.rating === 0 && "Click to rate"}
+                {feedbackData.rating === 1 && "Poor"}
+                {feedbackData.rating === 2 && "Fair"}
+                {feedbackData.rating === 3 && "Good"}
+                {feedbackData.rating === 4 && "Very Good"}
+                {feedbackData.rating === 5 && "Excellent"}
+              </span>
+            </div>
+          </div>
+
+          {/* Feedback Text */}
+          <div>
+            <label className="block text-sm font-medium text-[#101828] mb-2">
+              Tell us about your experience
+            </label>
+            <div className="text-xs text-[#667085] mb-2">
+              How was the conversation flow? Did the bot handle your responses well?
+            </div>
+            <textarea
+              value={feedbackData.feedbackText}
+              onChange={(e) =>
+                setFeedbackData({ ...feedbackData, feedbackText: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-24 resize-none text-base"
+              placeholder="The bot sounded natural and handled my objections well. However, it could improve by..."
+              disabled={isLoading}
+            />
+          </div>
+
+          {/* Suggestions */}
+          <div>
+            <label className="block text-sm font-medium text-[#101828] mb-2">
+              Specific Improvements (Optional)
+            </label>
+            <div className="text-xs text-[#667085] mb-2">
+              What specific changes would make the bot perform better?
+            </div>
+            <textarea
+              value={feedbackData.suggestions}
+              onChange={(e) =>
+                setFeedbackData({ ...feedbackData, suggestions: e.target.value })
+              }
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-20 resize-none text-base"
+              placeholder="- Speak slower during the introduction
+- Better handling of price objections
+- More natural transition to appointment booking"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-800">
+            <strong>💡 Feedback Tips:</strong>
+            <ul className="mt-1 list-disc list-inside space-y-1">
+              <li>Rate conversation naturalness and flow</li>
+              <li>Note how well objections were handled</li>
+              <li>Evaluate appointment booking process</li>
+              <li>Suggest specific script improvements</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="p-4 lg:p-6 border-t border-[#EAECF0] flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={handleClose}
+            className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-base"
+            disabled={isLoading}
+          >
+            Skip Feedback
+          </button>
+          <button
+            onClick={handleSubmit}
+            className={`flex-1 px-4 py-3 rounded-lg transition-colors text-base flex items-center justify-center gap-2 ${
+              feedbackData.rating === 0 || !feedbackData.feedbackText.trim()
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
+            disabled={
+              isLoading ||
+              feedbackData.rating === 0 ||
+              !feedbackData.feedbackText.trim()
+            }
+          >
+            {isLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Submitting...
+              </>
+            ) : (
+              <>
+                <MessageSquare size={16} />
+                Submit Feedback
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

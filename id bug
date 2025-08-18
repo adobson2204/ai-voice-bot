@@ -1,0 +1,42 @@
+// Debug endpoint to check environment variables
+export async function GET() {
+  try {
+    const requiredVars = {
+      TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
+      TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
+      TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL
+    };
+
+    const status = {
+      TWILIO_ACCOUNT_SID: requiredVars.TWILIO_ACCOUNT_SID ? `Set (${requiredVars.TWILIO_ACCOUNT_SID.substring(0, 6)}...)` : 'NOT SET',
+      TWILIO_AUTH_TOKEN: requiredVars.TWILIO_AUTH_TOKEN ? `Set (${requiredVars.TWILIO_AUTH_TOKEN.substring(0, 6)}...)` : 'NOT SET', 
+      TWILIO_PHONE_NUMBER: requiredVars.TWILIO_PHONE_NUMBER || 'NOT SET',
+      NEXT_PUBLIC_APP_URL: requiredVars.NEXT_PUBLIC_APP_URL || 'NOT SET (using default)'
+    };
+
+    const allSet = requiredVars.TWILIO_ACCOUNT_SID && 
+                   requiredVars.TWILIO_AUTH_TOKEN && 
+                   requiredVars.TWILIO_PHONE_NUMBER;
+
+    return Response.json({
+      success: allSet,
+      message: allSet ? 
+        'All Twilio environment variables are properly configured!' :
+        'Some Twilio environment variables are missing!',
+      variables: status,
+      recommendations: allSet ? [] : [
+        'Make sure you have added all three Twilio variables to your Saved Secrets',
+        'Try restarting your development server',
+        'Double-check the exact variable names match: TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER'
+      ]
+    });
+
+  } catch (error) {
+    return Response.json({
+      success: false,
+      message: 'Error checking environment variables',
+      error: error.message
+    }, { status: 500 });
+  }
+}

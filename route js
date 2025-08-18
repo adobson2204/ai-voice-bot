@@ -1,0 +1,110 @@
+// Handle conversation flow during calls
+export async function POST(request) {
+  try {
+    const formData = await request.formData();
+    const speechResult = formData.get("SpeechResult") || "";
+    const digits = formData.get("Digits") || "";
+    const { searchParams } = new URL(request.url);
+    const campaignId = searchParams.get("campaign_id");
+    const testCall = searchParams.get("test_call") === "true";
+
+    // Simple AI conversation logic
+    const userInput = speechResult || digits;
+    let response = "";
+    let shouldScheduleAppointment = false;
+
+    if (
+      userInput.toLowerCase().includes("interested") ||
+      userInput.toLowerCase().includes("yes") ||
+      digits === "1"
+    ) {
+      response =
+        "Great! I'd love to schedule a brief appointment with one of our agents to discuss your options. Are you available this week?";
+      shouldScheduleAppointment = true;
+    } else if (
+      userInput.toLowerCase().includes("not interested") ||
+      userInput.toLowerCase().includes("no") ||
+      digits === "2"
+    ) {
+      response = "I understand. Thank you for your time. Have a wonderful day!";
+    } else if (
+      userInput.toLowerCase().includes("more information") ||
+      userInput.toLowerCase().includes("tell me more") ||
+      digits === "3"
+    ) {
+      response =
+        "I'd be happy to have one of our specialists call you back with more detailed information. Would you prefer a call this week or next week?";
+      shouldScheduleAppointment = true;
+    } else {
+      response =
+        "I want to make sure I understand you correctly. Are you interested in learning more about our services? Press 1 for yes, 2 for no, or 3 for more information.";
+    }
+
+    let twiml;
+    if (shouldScheduleAppointment) {
+      twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="man" language="en-US">
+    ${escapeXml(response)}
+  </Say>
+  <Gather 
+    input="speech dtmf" 
+    timeout="8" 
+    speechTimeout="auto" 
+    action="/api/call-bot/schedule?campaign_id=${campaignId}&test_call=${testCall}"
+    method="POST"
+  >
+    <Say voice="man" language="en-US">
+      Please say this week or next week, or press 1 for this week, 2 for next week.
+    </Say>
+  </Gather>
+  <Say voice="man" language="en-US">
+    No problem, we'll have someone reach out to you soon. Thank you!
+  </Say>
+  <Hangup/>
+</Response>`;
+    } else {
+      twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="man" language="en-US">
+    ${escapeXml(response)}
+  </Say>
+  <Hangup/>
+</Response>`;
+    }
+
+    return new Response(twiml, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/xml",
+      },
+    });
+  } catch (error) {
+    console.error("Error in conversation flow:", error);
+
+    const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="man" language="en-US">
+    This is Agent Brian. Thank you for your time. Someone from our team will follow up with you soon.
+  </Say>
+  <Hangup/>
+</Response>`;
+
+    return new Response(errorTwiml, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/xml",
+      },
+    });
+  }
+}
+
+// Helper function to escape XML characters
+function escapeXml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}

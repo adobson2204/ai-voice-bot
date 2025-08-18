@@ -1,0 +1,61 @@
+import sql from "@/app/api/utils/sql";
+
+// Handle Twilio recording callbacks
+export async function POST(request) {
+  try {
+    const formData = await request.formData();
+    const callSid = formData.get('CallSid');
+    const recordingSid = formData.get('RecordingSid');
+    const recordingUrl = formData.get('RecordingUrl');
+    const recordingDuration = formData.get('RecordingDuration') || '0';
+
+    console.log('Recording webhook received:', {
+      callSid,
+      recordingSid,
+      recordingUrl,
+      recordingDuration
+    });
+
+    if (!callSid || !recordingSid) {
+      return Response.json({ 
+        error: "CallSid and RecordingSid are required" 
+      }, { status: 400 });
+    }
+
+    // Update the call log with recording information
+    const updated = await sql`
+      UPDATE call_logs 
+      SET notes = CASE 
+        WHEN notes LIKE '%[TEST CALL]%' THEN 
+          CONCAT(notes, ' | Recording available: ', ${recordingSid})
+        ELSE 
+          CONCAT(notes, ' | Recording available: ', ${recordingSid})
+      END
+      WHERE notes LIKE '%Call initiated with SID: ${callSid}%' 
+         OR notes LIKE '%Call completed - Status:%${callSid}%'
+      RETURNING id, campaign_id
+    `;
+
+    if (updated.length > 0) {
+      console.log(`Updated call log with recording for SID ${callSid}: ${recordingSid}`);
+
+      // Optional: Store recording URL in a separate table if you want to track recordings
+      // You could create a recordings table to store this data more structured
+    } else {
+      console.log(`No call log found for recording SID ${callSid}`);
+    }
+
+    return Response.json({ 
+      success: true, 
+      message: "Recording webhook processed successfully",
+      callSid,
+      recordingSid 
+    });
+  } catch (error) {
+    console.error('Error processing recording webhook:', error);
+    return Response.json(
+      { error: "Failed to process recording webhook: " + error.message },
+      { status: 500 }
+    );
+  }
+}

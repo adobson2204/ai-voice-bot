@@ -1,0 +1,104 @@
+import sql from "@/app/api/utils/sql";
+
+// GET - Get dashboard statistics
+export async function GET(request) {
+  try {
+    // Get overall stats
+    const [stats] = await sql`
+      SELECT 
+        (SELECT COUNT(*) FROM call_logs) as total_calls,
+        (SELECT COUNT(*) FROM appointments) as appointments_booked,
+        (SELECT COUNT(*) FROM campaigns WHERE status = 'active') as active_campaigns,
+        (SELECT 
+          CASE 
+            WHEN COUNT(*) > 0 
+            THEN ROUND((COUNT(*) FILTER (WHERE appointment_scheduled = true)::decimal / COUNT(*)) * 100, 1)
+            ELSE 0 
+          END 
+          FROM call_logs
+        ) as conversion_rate
+    `;
+
+    // Get recent call activity (last 7 days)
+    const callActivity = await sql`
+      SELECT 
+        DATE(created_at) as call_date,
+        COUNT(*) as calls_made,
+        COUNT(*) FILTER (WHERE appointment_scheduled = true) as appointments_scheduled
+      FROM call_logs 
+      WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
+      GROUP BY DATE(created_at)
+      ORDER BY call_date DESC
+    `;
+
+    // Get campaign performance
+    const campaignStats = await sql`
+      SELECT 
+        c.id,
+        c.name,
+        c.state,
+        c.status,
+        COALESCE(cl.call_count, 0) as calls_made,
+        COALESCE(a.appointment_count, 0) as appointments_booked,
+        CASE 
+          WHEN COALESCE(cl.call_count, 0) > 0 
+          THEN ROUND((COALESCE(a.appointment_count, 0)::decimal / COALESCE(cl.call_count, 0)) * 100, 1)
+          ELSE 0 
+        END as conversion_rate
+      FROM campaigns c
+      LEFT JOIN (
+        SELECT campaign_id, COUNT(*) as call_count 
+        FROM call_logs 
+        GROUP BY campaign_id
+      ) cl ON c.id = cl.campaign_id
+      LEFT JOIN (
+        SELECT campaign_id, COUNT(*) as appointment_count 
+        FROM appointments 
+        GROUP BY campaign_id
+      ) a ON c.id = a.campaign_id
+      ORDER BY c.created_at DESC
+    `;
+
+    // Get call status breakdown
+    const [callStatusBreakdown] = await sql`
+      SELECT 
+        COUNT(*) FILTER (WHERE call_status = 'answered') as answered,
+        COUNT(*) FILTER (WHERE call_status = 'no_answer') as no_answer,
+        COUNT(*) FILTER (WHERE call_status = 'busy') as busy,
+        COUNT(*) FILTER (WHERE call_status = 'invalid') as invalid
+      FROM call_logs
+    `;
+
+    return Response.json({
+      overview: {
+        total_calls: parseInt(stats.total_calls) || 0,
+        appointments_booked: parseInt(stats.appointments_booked) || 0,
+        active_campaigns: parseInt(stats.active_campaigns) || 0,
+        conversion_rate: parseFloat(stats.conversion_rate) || 0
+      },
+      call_activity: callActivity.map(activity => ({
+        date: activity.call_date,
+        calls_made: parseInt(activity.calls_made),
+        appointments_scheduled: parseInt(activity.appointments_scheduled)
+      })),
+      campaign_performance: campaignStats.map(campaign => ({
+        id: campaign.id,
+        name: campaign.name,
+        state: campaign.state,
+        status: campaign.status,
+        calls_made: parseInt(campaign.calls_made),
+        appointments_booked: parseInt(campaign.appointments_booked),
+        conversion_rate: parseFloat(campaign.conversion_rate)
+      })),
+      call_status_breakdown: {
+        answered: parseInt(callStatusBreakdown.answered) || 0,
+        no_answer: parseInt(callStatusBreakdown.no_answer) || 0,
+        busy: parseInt(callStatusBreakdown.busy) || 0,
+        invalid: parseInt(callStatusBreakdown.invalid) || 0
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching stats:', error);
+    return Response.json({ error: 'Failed to fetch statistics' }, { status: 500 });
+  }
+}
