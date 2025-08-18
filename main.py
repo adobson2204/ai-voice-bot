@@ -7,7 +7,12 @@ from openai import OpenAI
 app = Flask(__name__)
 
 # Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+api_key = os.getenv("OPENAI_API_KEY")
+if not api_key:
+    print("Warning: OPENAI_API_KEY not found in environment variables")
+    client = None
+else:
+    client = OpenAI(api_key=api_key)
 
 @app.route("/voice", methods=["POST"])
 def voice():
@@ -28,18 +33,21 @@ def process():
     ai_response = "Sorry, I didn't catch that."
 
     if transcription:
-        try:
-            completion = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": transcription}
-                ]
-            )
-            ai_response = completion.choices[0].message.content
-        except Exception as e:
-            print(f"OpenAI API error: {e}")
-            ai_response = "I'm having trouble processing your request right now."
+        if not client:
+            ai_response = "OpenAI API key is not configured."
+        else:
+            try:
+                completion = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant."},
+                        {"role": "user", "content": transcription}
+                    ]
+                )
+                ai_response = completion.choices[0].message.content
+            except Exception as e:
+                print(f"OpenAI API error: {e}")
+                ai_response = "I'm having trouble processing your request right now."
 
     response = VoiceResponse()
     response.say(ai_response)
