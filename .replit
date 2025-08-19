@@ -4,7 +4,7 @@ modules = ["python-3.10"]
 channel = "stable-25_05"
 
 [deployment]
-run = ["python3", "main.py"]
+run = ["sh", "-c", "python3 main.py"]
 deploymentTarget = "cloudrun"
 
 [workflows]
