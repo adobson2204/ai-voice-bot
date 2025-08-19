@@ -49,5 +49,5 @@ def process():
 
     response = VoiceResponse()
     response.say(ai_response)
-    return str(response
+    return str(response)
 
