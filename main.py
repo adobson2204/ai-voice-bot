@@ -8,11 +8,18 @@ app = Flask(__name__)
 
 # Initialize OpenAI client
 api_key = os.getenv("OPENAI_API_KEY")
+twilio_account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+twilio_auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+
 if not api_key:
     print("Warning: OPENAI_API_KEY not found in environment variables")
     client = None
 else:
     client = OpenAI(api_key=api_key)
+
+# Check for required Twilio credentials
+if not twilio_account_sid or not twilio_auth_token:
+    print("Warning: TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN not found in environment variables")
 
 @app.route("/voice", methods=["POST"])
 def voice():
@@ -56,7 +63,19 @@ def process():
 @app.route("/")
 def home():
     """Health check endpoint"""
-    return "Twilio Voice Bot is running!"
+    status = {"app": "Twilio Voice Bot is running!"}
+    
+    if not os.getenv("OPENAI_API_KEY"):
+        status["openai"] = "ERROR: OPENAI_API_KEY not configured"
+    else:
+        status["openai"] = "OK"
+        
+    if not os.getenv("TWILIO_ACCOUNT_SID") or not os.getenv("TWILIO_AUTH_TOKEN"):
+        status["twilio"] = "ERROR: Twilio credentials not configured"
+    else:
+        status["twilio"] = "OK"
+    
+    return status
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
