@@ -20,23 +20,11 @@ else:
 if not twilio_account_sid or not twilio_auth_token:
     print("Warning: TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN not found in environment variables")
 
-
-@app.route("/voice", methods=["POST"])
-def voice():
-    """Handle incoming voice calls"""
-    response = VoiceResponse()
-    response.say("Hi there. Tell me what you're looking for after the beep.")
-    response.record(
-        max_length=8,
-        action="/process",
-        transcribe=True
-    )
-    return Response(str(response), mimetype="text/xml")
 @app.route("/process", methods=["POST"])
 def process():
     """Process transcribed audio and generate AI response"""
     print("----- Incoming POST from Twilio -----")
-    print(request.form)  # This shows us what Twilio actually sends
+    print(request.form)  # Logs everything Twilio sends
     print("-------------------------------------")
 
     transcription = request.form.get("TranscriptionText", "")
@@ -61,4 +49,5 @@ def process():
 
     response = VoiceResponse()
     response.say(ai_response)
-    return Response(str(response), mimetype="text/xml")
+    return str(response
+
