@@ -32,11 +32,13 @@ def voice():
         transcribe=True
     )
     return Response(str(response), mimetype="text/xml")
-
-
 @app.route("/process", methods=["POST"])
 def process():
     """Process transcribed audio and generate AI response"""
+    print("----- Incoming POST from Twilio -----")
+    print(request.form)  # This shows us what Twilio actually sends
+    print("-------------------------------------")
+
     transcription = request.form.get("TranscriptionText", "")
     ai_response = "Sorry, I didn't catch that."
 
@@ -60,26 +62,3 @@ def process():
     response = VoiceResponse()
     response.say(ai_response)
     return Response(str(response), mimetype="text/xml")
-
-
-@app.route("/")
-def home():
-    """Health check endpoint"""
-    status = {"app": "Twilio Voice Bot is running!"}
-
-    if not os.getenv("OPENAI_API_KEY"):
-        status["openai"] = "ERROR: OPENAI_API_KEY not configured"
-    else:
-        status["openai"] = "OK"
-
-    if not os.getenv("TWILIO_ACCOUNT_SID") or not os.getenv("TWILIO_AUTH_TOKEN"):
-        status["twilio"] = "ERROR: Twilio credentials not configured"
-    else:
-        status["twilio"] = "OK"
-
-    return status
-
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
