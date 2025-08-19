@@ -9,3 +9,7 @@ deploymentTarget = "cloudrun"
 
 [workflows]
 runButton = "Run Flask App"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
