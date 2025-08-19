@@ -7,6 +7,7 @@ from openai import OpenAI
 app = Flask(__name__)
 
 # Initialize OpenAI client
+print("key exists:", "OPENAI_API_KEY" in os.environ)
 api_key = os.getenv("OPENAI_API_KEY")
 twilio_account_sid = os.getenv("TWILIO_ACCOUNT_SID")
 twilio_auth_token = os.getenv("TWILIO_AUTH_TOKEN")
