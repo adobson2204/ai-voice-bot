@@ -1,13 +1,11 @@
-
 import os
-from flask import Flask, request
+from flask import Flask, request, Response
 from twilio.twiml.voice_response import VoiceResponse
 from openai import OpenAI
 
 app = Flask(__name__)
 
 # Initialize OpenAI client
-print("key exists:", "OPENAI_API_KEY" in os.environ)
 api_key = os.getenv("OPENAI_API_KEY")
 twilio_account_sid = os.getenv("TWILIO_ACCOUNT_SID")
 twilio_auth_token = os.getenv("TWILIO_AUTH_TOKEN")
@@ -22,6 +20,7 @@ else:
 if not twilio_account_sid or not twilio_auth_token:
     print("Warning: TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN not found in environment variables")
 
+
 @app.route("/voice", methods=["POST"])
 def voice():
     """Handle incoming voice calls"""
@@ -32,7 +31,8 @@ def voice():
         action="/process",
         transcribe=True
     )
-    return str(response)
+    return Response(str(response), mimetype="text/xml")
+
 
 @app.route("/process", methods=["POST"])
 def process():
@@ -59,45 +59,27 @@ def process():
 
     response = VoiceResponse()
     response.say(ai_response)
-    return str(response)
+    return Response(str(response), mimetype="text/xml")
+
 
 @app.route("/")
 def home():
     """Health check endpoint"""
     status = {"app": "Twilio Voice Bot is running!"}
-    
+
     if not os.getenv("OPENAI_API_KEY"):
         status["openai"] = "ERROR: OPENAI_API_KEY not configured"
     else:
         status["openai"] = "OK"
-        
+
     if not os.getenv("TWILIO_ACCOUNT_SID") or not os.getenv("TWILIO_AUTH_TOKEN"):
         status["twilio"] = "ERROR: Twilio credentials not configured"
     else:
         status["twilio"] = "OK"
-    
+
     return status
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
-@app.route("/voice", methods=["POST"])
-def voice():
-    response = VoiceResponse()
-
-    if "SpeechResult" not in request.values:
-        gather = response.gather(input="speech", timeout=5)
-        gather.say("Tell me what you're looking for after the beep.")
-        return Response(str(response), mimetype="text/xml")
-
-    speech_text = request.values.get("SpeechResult")
-
-    if speech_text:
-        print("User said:", speech_text)
-        response.say(f"You said: {speech_text}")
-    else:
-        response.say("Sorry, I didn't catch that.")
-
-    return Response(str(response), mimetype="text/xml")
-
-
