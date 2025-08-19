@@ -23,9 +23,9 @@ if not twilio_account_sid or not twilio_auth_token:
 @app.route("/process", methods=["POST"])
 def process():
     """Process transcribed audio and generate AI response"""
-    print("----- Incoming POST from Twilio -----")
-    print(request.form)  # Logs everything Twilio sends
-    print("-------------------------------------")
+    print("----- Incoming POST from Twilio -----", file=sys.stderr)
+    print(request.form, file=sys.stderr)  # Logs everything Twilio sends
+    print("-------------------------------------", file=sys.stderr)
 
     transcription = request.form.get("TranscriptionText", "")
     ai_response = "Sorry, I didn't catch that."
