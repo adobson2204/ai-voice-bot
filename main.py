@@ -81,3 +81,23 @@ def home():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+@app.route("/voice", methods=["POST"])
+def voice():
+    response = VoiceResponse()
+
+    if "SpeechResult" not in request.values:
+        gather = response.gather(input="speech", timeout=5)
+        gather.say("Tell me what you're looking for after the beep.")
+        return Response(str(response), mimetype="text/xml")
+
+    speech_text = request.values.get("SpeechResult")
+
+    if speech_text:
+        print("User said:", speech_text)
+        response.say(f"You said: {speech_text}")
+    else:
+        response.say("Sorry, I didn't catch that.")
+
+    return Response(str(response), mimetype="text/xml")
+
+
